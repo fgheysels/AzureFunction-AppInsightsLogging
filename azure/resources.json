@@ -1,0 +1,117 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "variables": {
+      "appInsightsName" : "fg-appinsightstest",
+      "storageaccountName": "fghttploggingstorage",
+      "appSvcName": "fg-logging-plan",
+      "functionName": "fg-httplogging"
+    },
+    "resources": [
+      {
+        "comments": "Application Insights",
+        "type": "Microsoft.Insights/components",
+        "kind": "web",
+        "name": "[variables('appInsightsName')]",
+        "apiVersion": "2015-05-01",
+        "location": "[resourceGroup().location]",
+        "tags": {},
+        "scale": null,
+        "properties": {
+          "Application_Type": "web"        
+        },
+        "dependsOn": []
+      },
+      {
+        "type": "Microsoft.Storage/storageAccounts",
+        "sku": {
+          "name": "Standard_LRS",
+          "tier": "Standard"
+        },
+        "kind": "Storage",
+        "name": "[variables('storageaccountName')]",
+        "apiVersion": "2018-02-01",
+        "location": "[resourceGroup().location]",
+        "tags": {},
+        "scale": null,
+        "properties": {
+          "networkAcls": {
+            "bypass": "AzureServices",
+            "virtualNetworkRules": [],
+            "ipRules": [],
+            "defaultAction": "Allow"
+          },
+          "encryption": {
+            "services": {
+              "file": {
+                "enabled": true
+              },
+              "blob": {
+                "enabled": true
+              }
+            },
+            "keySource": "Microsoft.Storage"
+          }
+        }
+      },
+      {
+        "type": "Microsoft.Web/serverfarms",
+        "apiVersion": "2018-02-01",
+        "name": "[variables('appSvcName')]",
+        "location": "[resourceGroup().location]",
+        "tags": {},
+        "properties": {
+          "name": "[variables('appSvcName')]"
+        },
+        "sku": {
+          "name": "B1",
+          "tier": "Basic",
+          "size": "B1",
+          "family": "B",
+          "capacity": 1
+        }
+      },
+      {
+        "type": "Microsoft.Web/sites",
+        "kind": "functionapp",
+        "name": "[variables('functionName')]",
+        "apiVersion": "2016-08-01",
+        "location": "[resourceGroup().location]",
+        "tags": {},
+        "identity": {
+          "type": "SystemAssigned"
+        },
+        "scale": null,
+        "properties": {
+          "enabled": true,
+          "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appSvcName'))]",
+          "reserved": false,
+          "siteConfig": {
+            "appSettings": [
+              {
+                "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+                "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2014-04-01').InstrumentationKey]"
+              },
+              {
+                "name": "FUNCTIONS_EXTENSION_VERSION",
+                "value": "~2"
+              },
+              {
+                "name": "FUNCTION_APP_EDIT_MODE",
+                "value": "readwrite"
+              },
+              {
+                "name": "AzureWebJobsStorage",
+                "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageAccountName'),';AccountKey=',listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), providers('Microsoft.Storage', 'storageAccounts').apiVersions[0]).keys[0].value,';EndpointSuffix=core.windows.net')]"
+              }
+            ],
+            "alwaysOn": true
+          }
+        },
+        "dependsOn": [
+          "[concat('Microsoft.Storage/storageAccounts/', variables('storageaccountName'))]",
+          "[concat('Microsoft.Web/serverfarms/', variables('appSvcName'))]"
+        ]
+      }
+    ]
+  }
