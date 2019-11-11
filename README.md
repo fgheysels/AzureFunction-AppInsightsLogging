@@ -23,3 +23,11 @@ To run the Function locally from your development computer, add a `local.setting
   }
 }
 ```
+
+Once you have this, the Function can be run from VS.NET.  Invoke the Function by doing a simple GET request to it's http endpoint and provide a query-string parameter which is called 'number'.  For instance like this:
+
+```
+http://localhost:7071/api/LogTester?number=361
+```
+
+Some log-statements will be written to AppInsights, and those traces vary based on the fact if the provided number is odd or even.
