@@ -1,6 +1,5 @@
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
-using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
@@ -13,15 +12,22 @@ using System.Threading.Tasks;
 
 namespace HttpFunction
 {
-    public static class LogTester
+    public class LogTester
     {
-        private static readonly TelemetryClient Logger
-            = new TelemetryClient(new TelemetryConfiguration(Environment.GetEnvironmentVariable("APPINSIGHTS_INSTRUMENTATIONKEY")));
+        private readonly TelemetryClient _logger;
 
         private static readonly HttpClient Http = new HttpClient();
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="LogTester"/> class.
+        /// </summary>
+        public LogTester(TelemetryClient logger)
+        {
+            _logger = logger;
+        }
+
         [FunctionName("LogTester")]
-        public static async Task<IActionResult> Run(
+        public async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)] HttpRequest req)
         {
             if (req.Query.ContainsKey("number") == false)
@@ -33,10 +39,10 @@ namespace HttpFunction
 
             if (number % 2 != 0)
             {
-                Logger.TrackTrace("Number is not even", SeverityLevel.Error,
+                _logger.TrackTrace("Number is not even", SeverityLevel.Error,
                     new Dictionary<string, string>() { { "number", number.ToString() } });
 
-                Logger.TrackException(new InvalidOperationException("Number not even"));
+                _logger.TrackException(new InvalidOperationException("Number not even"));
 
                 return new OkObjectResult("number not even");
             }
@@ -52,7 +58,7 @@ namespace HttpFunction
                     trace.Context.Operation.ParentId = Activity.Current.ParentId;
                 }
 
-                Logger.TrackTrace(trace);
+                _logger.TrackTrace(trace);
 
                 return new OkObjectResult("number even");
             }
