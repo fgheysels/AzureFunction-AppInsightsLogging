@@ -35,3 +35,5 @@ Some log-statements will be written to AppInsights, and those traces vary based 
 ## Update: getting it to work as expected
 
 Apparently, it is now possible to use [constructor dependency injection in Azure Functions](https://docs.microsoft.com/en-us/azure/azure-functions/functions-dotnet-dependency-injection).  To use ctor DI, the Function class and method should offcourse no longer be static; once this is done a constructor can be created on the class which has a TelemetryClient parameter.  The DI infrastructure will inject the `TelemetryClient` instance that is being used by the Function internally and this instance can then be used inside our Function.  Since we're reusing the `TelemetryClient` that is created by the Azure Function, we also no longer require a custom `TelemetryInitializer` to make sure that all traces are correctly linked to each Function Request.
+
+(The Azure Function team [guided](https://github.com/Azure/azure-functions-host/issues/5235) me to this solution)
